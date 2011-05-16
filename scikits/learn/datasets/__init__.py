@@ -1,3 +1,4 @@
+from .base import load_particle
 from .base import load_diabetes
 from .base import load_digits
 from .base import load_filenames
