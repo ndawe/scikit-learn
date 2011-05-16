@@ -271,7 +271,7 @@ def load_particle():
     module_path = dirname(__file__)
     base_dir = join(module_path, 'data')
     data = np.loadtxt(join(base_dir, 'particle.csv.gz'))
-    target = np.concatenate(np.ones(10000), -np.ones(10000))
+    target = np.concatenate([np.ones(10000), -np.ones(10000)])
     descr = open(join(module_path, 'descr', 'particle.rst')).read()
     return Bunch(data=data, target=target, DESCR=descr)
 
