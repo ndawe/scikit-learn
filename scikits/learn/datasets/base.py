@@ -256,6 +256,25 @@ def load_digits(n_class=10):
                  DESCR=descr)
 
 
+def load_particle():
+    """ Load the particles dataset and returns it.
+
+    Returns
+    -------
+    data : Bunch
+        Dictionnary-like object, the interesting attributes are:
+        'data', the data to learn and 'target', the labels for each
+        sample.
+
+
+    """
+    module_path = dirname(__file__)
+    base_dir = join(module_path, 'data')
+    data = np.loadtxt(join(base_dir, 'particle.csv.gz'))
+    target = np.concatenate(np.ones(10000), -np.ones(10000))
+    descr = open(join(module_path, 'descr', 'particle.rst')).read()
+    return Bunch(data=data, target=target, DESCR=descr)
+
 def load_diabetes():
     """ Load the diabetes dataset and returns it.
 
