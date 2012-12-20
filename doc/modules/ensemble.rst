@@ -255,8 +255,8 @@ The module :mod:`sklearn.ensemble` implements the popular AdaBoost algorithm
 first introduced by Freud and Schapire [FS1995]_ back in 1995.
 
 The core principle of AdaBoost is to fit a sequence of weak learners (i.e.,
-models that are only slightly better than random guessing, such as a small
-decision tree) on repeatedly modified versions of the data. The predictions from
+models that are only slightly better than random guessing, such as small
+decision trees) on repeatedly modified versions of the data. The predictions from
 all of them are then combined through a weighted majority vote (or sum) to
 produce the final prediction. The data modifications at each boosting iteration
 consist of applying weights :math:`w_1`, :math:`w_2`, ..., :math:`w_N` to each
@@ -312,13 +312,16 @@ better test error. By default, weak learners are decision trees of
 
 .. topic:: References
 
- .. [FS1995] Y. Freud, and R. Schapire, "A decision theoretic generalization of online learning and an application to boosting", 1997.
+ .. [FS1995] Y. Freud, and R. Schapire, "A decision theoretic generalization of
+             online learning and an application to boosting", 1997.
 
- .. [ZZRH2009] J. Zhu, H. Zou, S. Rosset, T. Hastie. "Multi-class AdaBoost", 2009.
+ .. [ZZRH2009] J. Zhu, H. Zou, S. Rosset, T. Hastie. "Multi-class AdaBoost",
+               2009.
 
  .. [D1997] H. Drucker. "Improving Regressor using Boosting Techniques", 1997.
 
- .. [HTF2009] T. Hastie, R. Tibshirani and J. Friedman, "Elements of Statistical Learning Ed. 2", Springer, 2009.
+ .. [HTF2009] T. Hastie, R. Tibshirani and J. Friedman, "Elements of
+              Statistical Learning Ed. 2", Springer, 2009.
 
 
 .. _gradient_boosting:
