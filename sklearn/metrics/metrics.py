@@ -709,7 +709,7 @@ def zero_one(y_true, y_pred, normalize=False):
 ###############################################################################
 # Multiclass score functions
 ###############################################################################
-def accuracy_score(y_true, y_pred):
+def accuracy_score(y_true, y_pred, sample_weight=None):
     """Accuracy classification score
 
     Parameters
@@ -719,6 +719,9 @@ def accuracy_score(y_true, y_pred):
 
     y_pred : array-like, shape = n_samples
         Predicted labels, as returned by a classifier.
+
+    sample_weight : array-like, shape = n_samples
+        Sample weights.
 
     Returns
     -------
@@ -740,6 +743,8 @@ def accuracy_score(y_true, y_pred):
 
     """
     y_true, y_pred = check_arrays(y_true, y_pred)
+    if sample_weight is not None:
+        return np.average(y_pred == y_true, weights=sample_weight)
     return np.mean(y_pred == y_true)
 
 
@@ -1511,7 +1516,7 @@ def explained_variance_score(y_true, y_pred):
     return 1 - numerator / denominator
 
 
-def r2_score(y_true, y_pred):
+def r2_score(y_true, y_pred, sample_weight=None):
     """R^2 (coefficient of determination) regression score function
 
     Best possible score is 1.0, lower values are worse.
@@ -1523,6 +1528,9 @@ def r2_score(y_true, y_pred):
 
     y_pred : array-like of shape = [n_samples] or [n_samples, n_outputs]
         Estimated target values.
+
+    sample_weight : array-like of shape = [n_samples]
+        Sample weights.
 
     Returns
     -------
@@ -1554,8 +1562,12 @@ def r2_score(y_true, y_pred):
     if len(y_true) == 1:
         raise ValueError("r2_score can only be computed given more than one"
                          " sample.")
-    numerator = ((y_true - y_pred) ** 2).sum()
-    denominator = ((y_true - y_true.mean(axis=0)) ** 2).sum()
+    if sample_weight is not None:
+        numerator = (weights * (y_true - y_pred) ** 2).sum()
+        denominator = (weights * (y_true - y_true.mean()) ** 2).sum()
+    else:
+        numerator = ((y_true - y_pred) ** 2).sum()
+        denominator = ((y_true - y_true.mean(axis=0)) ** 2).sum()
 
     if denominator == 0.0:
         if numerator == 0.0:

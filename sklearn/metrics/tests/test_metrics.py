@@ -682,3 +682,14 @@ def test_multioutput_regression_invariance_to_dimension_shuffling():
             perm = np.random.permutation(n_dims)
             assert_almost_equal(error,
                                 metric(y_true[:, perm], y_pred[:, perm]))
+
+
+def test_weighted_r2_score():
+    """Test weighted score functions"""
+    y_true, y_pred, _ = make_prediction(binary=True)
+    n = y_true.shape[0]
+
+    assert_array_equal(r2_score(y_true, y_pred),
+                       r2_score(np.r_[y_true, y_true],
+                                np.r_[y_pred, y_pred],
+                                sample_weight=0.5 * np.ones((2 * n,))))
