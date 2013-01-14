@@ -129,7 +129,7 @@ clf = AdaBoostClassifier(DecisionTreeClassifier(), learning_rate=0.5)
 
 grid_params_slow = {
     'base_estimator__min_samples_leaf': range(1, 600, 50),
-    'n_estimators': range(1, 1001, 100)
+    'n_estimators': range(1, 501, 100)
 }
 
 grid_params_fast = {
@@ -144,7 +144,7 @@ grid_clf_slow = GridSearchCV(
 
 grid_clf_fast = BoostGridSearchCV(
         clf, grid_params_fast,
-        max_n_estimators=1000,
+        max_n_estimators=500,
         cv=StratifiedKFold(y, 3),
         n_jobs=-1,
         verbose=10)
