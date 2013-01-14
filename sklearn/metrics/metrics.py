@@ -1563,8 +1563,8 @@ def r2_score(y_true, y_pred, sample_weight=None):
         raise ValueError("r2_score can only be computed given more than one"
                          " sample.")
     if sample_weight is not None:
-        numerator = (weights * (y_true - y_pred) ** 2).sum()
-        denominator = (weights * (y_true - y_true.mean()) ** 2).sum()
+        numerator = (sample_weight * (y_true - y_pred) ** 2).sum()
+        denominator = (sample_weight * (y_true - y_true.mean()) ** 2).sum()
     else:
         numerator = ((y_true - y_pred) ** 2).sum()
         denominator = ((y_true - y_true.mean(axis=0)) ** 2).sum()

@@ -72,7 +72,8 @@ class IterGrid(object):
                 yield params
 
 
-def fit_grid_point(X, y, base_clf, clf_params, train, test, scorer,
+def fit_grid_point(X, y, sample_weight, base_clf, clf_params,
+                   train, test, scorer,
                    verbose, loss_func=None, **fit_params):
     """Run fit on one set of parameters
 
@@ -110,21 +111,28 @@ def fit_grid_point(X, y, base_clf, clf_params, train, test, scorer,
             X_train = X[safe_mask(X, train)]
             X_test = X[safe_mask(X, test)]
 
+    score_params = dict()
+    if sample_weight is not None:
+        sample_weight_train = sample_weight[safe_mask(sample_weight, train)]
+        sample_weight_test = sample_weight[safe_mask(sample_weight, test)]
+        fit_params['sample_weight'] = sample_weight_train
+        score_params['sample_weight'] = sample_weight_test
+
     if y is not None:
         y_test = y[safe_mask(y, test)]
         y_train = y[safe_mask(y, train)]
         clf.fit(X_train, y_train, **fit_params)
 
         if scorer is not None:
-            this_score = scorer(clf, X_test, y_test)
+            this_score = scorer(clf, X_test, y_test, **score_params)
         else:
-            this_score = clf.score(X_test, y_test)
+            this_score = clf.score(X_test, y_test, **score_params)
     else:
         clf.fit(X_train, **fit_params)
         if scorer is not None:
-            this_score = scorer(clf, X_test)
+            this_score = scorer(clf, X_test, **score_params)
         else:
-            this_score = clf.score(X_test)
+            this_score = clf.score(X_test, **score_params)
 
     if not isinstance(this_score, numbers.Number):
         raise ValueError("scoring must return a number, got %s (%s)"
@@ -329,7 +337,7 @@ class GridSearchCV(BaseEstimator, MetaEstimatorMixin):
         if hasattr(self.best_estimator_, 'predict_proba'):
             self.predict_proba = self.best_estimator_.predict_proba
 
-    def fit(self, X, y=None, **params):
+    def fit(self, X, y=None, sample_weight=None, **params):
         """Run fit with all sets of parameters
 
         Returns the best classifier
@@ -345,6 +353,8 @@ class GridSearchCV(BaseEstimator, MetaEstimatorMixin):
             Target vector relative to X for classification;
             None for unsupervised learning.
 
+        sample_weight : array-like, shape = [n_samples], optional
+            Sample weights.
         """
         estimator = self.estimator
         cv = self.cv
@@ -387,7 +397,8 @@ class GridSearchCV(BaseEstimator, MetaEstimatorMixin):
         pre_dispatch = self.pre_dispatch
         out = Parallel(n_jobs=self.n_jobs, verbose=self.verbose,
                        pre_dispatch=pre_dispatch)(
-                           delayed(fit_grid_point)(X, y, base_clf, clf_params,
+                           delayed(fit_grid_point)(X, y, sample_weight,
+                                                   base_clf, clf_params,
                                                    train, test, scorer,
                                                    self.verbose,
                                                    **self.fit_params) for
@@ -443,10 +454,18 @@ class GridSearchCV(BaseEstimator, MetaEstimatorMixin):
             # fit the best estimator using the entire dataset
             # clone first to work around broken estimators
             best_estimator = clone(base_clf).set_params(**best_params)
-            if y is not None:
-                best_estimator.fit(X, y, **self.fit_params)
+            if sample_weight is not None:
+                if y is not None:
+                    best_estimator.fit(X, y, sample_weight=sample_weight,
+                                       **self.fit_params)
+                else:
+                    best_estimator.fit(X, sample_weight=sample_weight,
+                                       **self.fit_params)
             else:
-                best_estimator.fit(X, **self.fit_params)
+                if y is not None:
+                    best_estimator.fit(X, y, **self.fit_params)
+                else:
+                    best_estimator.fit(X, **self.fit_params)
             self.best_estimator_ = best_estimator
             self._set_methods()
 
@@ -458,12 +477,16 @@ class GridSearchCV(BaseEstimator, MetaEstimatorMixin):
                              in zip(grid, scores, cv_scores)]
         return self
 
-    def score(self, X, y=None):
+    def score(self, X, y=None, sample_weight=None):
+
+        score_params = dict()
+        if sample_weight is not None:
+            score_params['sample_weight'] = sample_weight
         if hasattr(self.best_estimator_, 'score'):
-            return self.best_estimator_.score(X, y)
+            return self.best_estimator_.score(X, y, **score_params)
         if self.scorer_ is None:
             raise ValueError("No score function explicitly defined, "
                              "and the estimator doesn't provide one %s"
                              % self.best_estimator_)
         y_predicted = self.predict(X)
-        return self.scorer(y, y_predicted)
+        return self.scorer(y, y_predicted, **score_params)
