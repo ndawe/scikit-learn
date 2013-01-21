@@ -720,7 +720,7 @@ def accuracy_score(y_true, y_pred, sample_weight=None):
     y_pred : array-like, shape = n_samples
         Predicted labels, as returned by a classifier.
 
-    sample_weight : array-like, shape = n_samples
+    sample_weight : array-like, shape = n_samples, optional
         Sample weights.
 
     Returns
@@ -1288,7 +1288,7 @@ def recall_score(y_true, y_pred, labels=None, pos_label=1, average='weighted'):
 
 @deprecated("Function zero_one_score has been renamed to "
             'accuracy_score'" and will be removed in release 0.15.")
-def zero_one_score(y_true, y_pred):
+def zero_one_score(y_true, y_pred, sample_weight=None):
     """Zero-one classification score (accuracy)
 
     Parameters
@@ -1299,6 +1299,9 @@ def zero_one_score(y_true, y_pred):
     y_pred : array-like, shape = n_samples
         Predicted labels, as returned by a classifier.
 
+    sample_weight : array-like, shape = n_samples, optional
+        Sample weights.
+
     Returns
     -------
     score : float
@@ -1306,7 +1309,7 @@ def zero_one_score(y_true, y_pred):
         1.
 
     """
-    return accuracy_score(y_true, y_pred)
+    return accuracy_score(y_true, y_pred, sample_weight=sample_weight)
 
 
 ###############################################################################
