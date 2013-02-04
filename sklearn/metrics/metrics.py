@@ -198,7 +198,7 @@ def average_precision_score(y_true, y_score):
     return auc(recall, precision)
 
 
-def auc_score(y_true, y_score):
+def auc_score(y_true, y_score, sample_weight=None):
     """Compute Area Under the Curve (AUC) from prediction scores
 
     Note: this implementation is restricted to the binary classification task.
@@ -212,6 +212,9 @@ def auc_score(y_true, y_score):
     y_score : array, shape = [n_samples]
         Target scores, can either be probability estimates of the positive
         class, confidence values, or binary decisions.
+
+    sample_weight : array-like of shape = [n_samples]
+        Sample weights.
 
     Returns
     -------
@@ -236,7 +239,8 @@ def auc_score(y_true, y_score):
 
     """
 
-    fpr, tpr, tresholds = roc_curve(y_true, y_score)
+    fpr, tpr, tresholds = roc_curve(y_true, y_score,
+                                    sample_weight=sample_weight)
     return auc(fpr, tpr, reorder=True)
 
 
@@ -408,7 +412,7 @@ def precision_recall_curve(y_true, probas_pred):
     return precision, recall, thresholds
 
 
-def roc_curve(y_true, y_score, pos_label=None):
+def roc_curve(y_true, y_score, pos_label=None, sample_weight=None):
     """Compute Receiver operating characteristic (ROC)
 
     Note: this implementation is restricted to the binary classification task.
@@ -426,6 +430,9 @@ def roc_curve(y_true, y_score, pos_label=None):
 
     pos_label : int
         Label considered as positive and others are considered negative.
+
+    sample_weight : array-like of shape = [n_samples]
+        Sample weights.
 
     Returns
     -------
@@ -461,6 +468,8 @@ def roc_curve(y_true, y_score, pos_label=None):
     """
     y_true = np.ravel(y_true)
     y_score = np.ravel(y_score)
+    if sample_weight is not None:
+        sample_weight = np.ravel(sample_weight)
     classes = np.unique(y_true)
 
     # ROC only for binary classification if pos_label not given
@@ -477,14 +486,19 @@ def roc_curve(y_true, y_score, pos_label=None):
 
     # y_true will be transformed into a boolean vector
     y_true = (y_true == pos_label)
-    n_pos = float(y_true.sum())
-    n_neg = y_true.shape[0] - n_pos
+    if sample_weight is not None:
+        total_weight = sample_weight.sum()
+        n_pos = float((y_true * sample_weight).sum())
+        n_neg = total_weight - n_pos
+    else:
+        n_pos = float(y_true.sum())
+        n_neg = y_true.shape[0] - n_pos
 
-    if n_pos == 0:
+    if n_pos <= 0:
         warnings.warn("No positive samples in y_true, "
                       "true positive value should be meaningless")
         n_pos = np.nan
-    if n_neg == 0:
+    if n_neg <= 0:
         warnings.warn("No negative samples in y_true, "
                       "false positive value should be meaningless")
         n_neg = np.nan
@@ -499,21 +513,27 @@ def roc_curve(y_true, y_score, pos_label=None):
     current_pos_count = current_neg_count = sum_pos = sum_neg = idx = 0
 
     signal = np.c_[y_score, y_true]
-    sorted_signal = signal[signal[:, 0].argsort(), :][::-1]
+    signal_argsort_idx = signal[:, 0].argsort()
+    sorted_signal = signal[signal_argsort_idx, :][::-1]
+    if sample_weight is not None:
+        sorted_sample_weight = sample_weight[signal_argsort_idx][::-1]
     last_score = sorted_signal[0][0]
-    for score, value in sorted_signal:
+    weight = 1.
+    for i, (score, value) in enumerate(sorted_signal):
+        if sample_weight is not None:
+            weight = sorted_sample_weight[i]
         if score == last_score:
             if value == pos_value:
-                current_pos_count += 1
+                current_pos_count += weight
             else:
-                current_neg_count += 1
+                current_neg_count += weight
         else:
             tpr[idx] = (sum_pos + current_pos_count) / n_pos
             fpr[idx] = (sum_neg + current_neg_count) / n_neg
             sum_pos += current_pos_count
             sum_neg += current_neg_count
-            current_pos_count = 1 if value == pos_value else 0
-            current_neg_count = 1 if value == neg_value else 0
+            current_pos_count = weight if value == pos_value else 0
+            current_neg_count = weight if value == neg_value else 0
             idx += 1
             last_score = score
     else:
