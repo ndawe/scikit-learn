@@ -395,6 +395,10 @@ def test_error():
     for name, TreeEstimator in ALL_TREES.items():
         # Invalid values for parameters
         assert_raises(ValueError, TreeEstimator(min_samples_leaf=-1).fit, X, y)
+        assert_raises(ValueError, TreeEstimator(min_fraction_leaf=-1).fit,
+                      X, y)
+        assert_raises(ValueError, TreeEstimator(min_fraction_leaf=0.51).fit,
+                      X, y)
         assert_raises(ValueError, TreeEstimator(min_samples_split=-1).fit,
                       X, y)
         assert_raises(ValueError, TreeEstimator(max_depth=-1).fit, X, y)
@@ -445,6 +449,24 @@ def test_min_samples_leaf():
         leaf_count = node_counts[node_counts != 0]  # drop inner nodes
         assert_greater(np.min(leaf_count), 4,
                        "Failed with {0}".format(name))
+
+
+def test_min_fraction_leaf():
+    """Test if leaves contain at least min_fraction_leaf of the training set"""
+    X = np.asfortranarray(iris.data.astype(tree._tree.DTYPE))
+    y = iris.target
+
+    for name, TreeEstimator in ALL_TREES.items():
+        for frac in (0., 0.01, 0.1, 0.2, 0.3, 0.4):
+            est = TreeEstimator(min_fraction_leaf=frac, random_state=0)
+            est.fit(X, y)
+            out = est.tree_.apply(X)
+            node_counts = np.bincount(out)
+            leaf_count = node_counts[node_counts != 0]  # drop inner nodes
+            assert_true(np.min(leaf_count) >=
+                        X.shape[0] * est.min_fraction_leaf,
+                        "Failed with {0} min_fraction_leaf={1}".format(
+                            name, est.min_fraction_leaf))
 
 
 def test_pickle():

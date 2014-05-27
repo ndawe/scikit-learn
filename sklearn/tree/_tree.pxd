@@ -74,6 +74,7 @@ cdef class Splitter:
     cdef public Criterion criterion      # Impurity criterion
     cdef public SIZE_t max_features      # Number of features to test
     cdef public SIZE_t min_samples_leaf  # Min samples in a leaf
+    cdef public float min_fraction_leaf
 
     cdef object random_state             # Random state
     cdef UINT32_t rand_r_state           # sklearn_rand_r random number state
@@ -199,6 +200,7 @@ cdef class TreeBuilder:
 
     cdef SIZE_t min_samples_split   # Minimum number of samples in an internal node
     cdef SIZE_t min_samples_leaf    # Minimum number of samples in a leaf
+    cdef float min_fraction_leaf
     cdef SIZE_t max_depth           # Maximal tree depth
 
     cpdef build(self, Tree tree, np.ndarray X, np.ndarray y,

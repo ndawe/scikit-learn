@@ -904,7 +904,9 @@ cdef class FriedmanMSE(MSE):
 
 cdef class Splitter:
     def __cinit__(self, Criterion criterion, SIZE_t max_features,
-                  SIZE_t min_samples_leaf, object random_state):
+                  SIZE_t min_samples_leaf,
+                  float min_fraction_leaf,
+                  object random_state):
         self.criterion = criterion
 
         self.samples = NULL
@@ -922,6 +924,7 @@ cdef class Splitter:
 
         self.max_features = max_features
         self.min_samples_leaf = min_samples_leaf
+        self.min_fraction_leaf = min_fraction_leaf
         self.random_state = random_state
 
     def __dealloc__(self):
@@ -1025,6 +1028,7 @@ cdef class BestSplitter(Splitter):
         return (BestSplitter, (self.criterion,
                                self.max_features,
                                self.min_samples_leaf,
+                               self.min_fraction_leaf,
                                self.random_state), self.__getstate__())
 
     cdef void node_split(self, double impurity, SIZE_t* pos, SIZE_t* feature,
@@ -1048,6 +1052,7 @@ cdef class BestSplitter(Splitter):
         cdef SIZE_t X_fx_stride = self.X_fx_stride
         cdef SIZE_t max_features = self.max_features
         cdef SIZE_t min_samples_leaf = self.min_samples_leaf
+        cdef float min_fraction_leaf = self.min_fraction_leaf
         cdef UINT32_t* random_state = &self.rand_r_state
 
         cdef double best_impurity_left = INFINITY
@@ -1170,6 +1175,13 @@ cdef class BestSplitter(Splitter):
                                 continue
 
                             self.criterion.update(current_pos)
+                             
+                            if self.min_fraction_leaf > 0:
+                                # Reject if min_fraction_leaf is not satisfied
+                                if ((self.criterion.weighted_n_left / self.weighted_n_samples < self.min_fraction_leaf) or
+                                        (self.criterion.weighted_n_right / self.weighted_n_samples < self.min_fraction_leaf)):
+                                    continue
+
                             current_improvement = self.criterion.impurity_improvement(impurity)
 
                             if current_improvement > best_improvement:
@@ -1341,6 +1353,7 @@ cdef class RandomSplitter(Splitter):
         return (RandomSplitter, (self.criterion,
                                  self.max_features,
                                  self.min_samples_leaf,
+                                 self.min_fraction_leaf,
                                  self.random_state), self.__getstate__())
 
     cdef void node_split(self, double impurity, SIZE_t* pos, SIZE_t* feature,
@@ -1364,6 +1377,7 @@ cdef class RandomSplitter(Splitter):
         cdef SIZE_t X_fx_stride = self.X_fx_stride
         cdef SIZE_t max_features = self.max_features
         cdef SIZE_t min_samples_leaf = self.min_samples_leaf
+        cdef float min_fraction_leaf = self.min_fraction_leaf
         cdef UINT32_t* random_state = &self.rand_r_state
 
         cdef double best_impurity_left = INFINITY
@@ -1505,6 +1519,13 @@ cdef class RandomSplitter(Splitter):
                     # Evaluate split
                     self.criterion.reset()
                     self.criterion.update(current_pos)
+
+                    if self.min_fraction_leaf > 0:
+                        # Reject if min_fraction_leaf is not satisfied
+                        if ((self.criterion.weighted_n_left / self.weighted_n_samples < self.min_fraction_leaf) or
+                                (self.criterion.weighted_n_right / self.weighted_n_samples < self.min_fraction_leaf)):
+                            continue
+
                     current_improvement = self.criterion.impurity_improvement(impurity)
 
                     if current_improvement > best_improvement:
@@ -1565,7 +1586,9 @@ cdef class PresortBestSplitter(Splitter):
     cdef unsigned char* sample_mask
 
     def __cinit__(self, Criterion criterion, SIZE_t max_features,
-                  SIZE_t min_samples_leaf, object random_state):
+                  SIZE_t min_samples_leaf,
+                  float min_fraction_leaf,
+                  object random_state):
         # Initialize pointers
         self.X_old = NULL
         self.X_argsorted_ptr = NULL
@@ -1580,6 +1603,7 @@ cdef class PresortBestSplitter(Splitter):
         return (PresortBestSplitter, (self.criterion,
                                       self.max_features,
                                       self.min_samples_leaf,
+                                      self.min_fraction_leaf,
                                       self.random_state), self.__getstate__())
 
     cdef void init(self,
@@ -1630,6 +1654,7 @@ cdef class PresortBestSplitter(Splitter):
 
         cdef SIZE_t max_features = self.max_features
         cdef SIZE_t min_samples_leaf = self.min_samples_leaf
+        cdef float min_fraction_leaf = self.min_fraction_leaf
         cdef UINT32_t* random_state = &self.rand_r_state
 
         cdef double best_impurity_left = INFINITY
@@ -1756,6 +1781,13 @@ cdef class PresortBestSplitter(Splitter):
                                 continue
 
                             self.criterion.update(current_pos)
+
+                            if self.min_fraction_leaf > 0:
+                                # Reject if min_fraction_leaf is not satisfied
+                                if ((self.criterion.weighted_n_left / self.weighted_n_samples < self.min_fraction_leaf) or
+                                        (self.criterion.weighted_n_right / self.weighted_n_samples < self.min_fraction_leaf)):
+                                    continue
+
                             current_improvement = self.criterion.impurity_improvement(impurity)
 
                             if current_improvement > best_improvement:
@@ -1833,10 +1865,13 @@ cdef class DepthFirstTreeBuilder(TreeBuilder):
     """Build a decision tree in depth-first fashion."""
 
     def __cinit__(self, Splitter splitter, SIZE_t min_samples_split,
-                  SIZE_t min_samples_leaf, SIZE_t max_depth):
+                  SIZE_t min_samples_leaf,
+                  float min_fraction_leaf,
+                  SIZE_t max_depth):
         self.splitter = splitter
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
+        self.min_fraction_leaf = min_fraction_leaf
         self.max_depth = max_depth
 
     cpdef build(self, Tree tree, np.ndarray X, np.ndarray y,
@@ -1872,6 +1907,7 @@ cdef class DepthFirstTreeBuilder(TreeBuilder):
         cdef Splitter splitter = self.splitter
         cdef SIZE_t max_depth = self.max_depth
         cdef SIZE_t min_samples_leaf = self.min_samples_leaf
+        cdef float min_fraction_leaf = self.min_fraction_leaf
         cdef SIZE_t min_samples_split = self.min_samples_split
 
         # Recursive partition (without actual recursion)
@@ -1998,11 +2034,14 @@ cdef class BestFirstTreeBuilder(TreeBuilder):
     cdef SIZE_t max_leaf_nodes
 
     def __cinit__(self, Splitter splitter, SIZE_t min_samples_split,
-                  SIZE_t min_samples_leaf, SIZE_t max_depth,
+                  SIZE_t min_samples_leaf,
+                  float min_fraction_leaf,
+                  SIZE_t max_depth,
                   SIZE_t max_leaf_nodes):
         self.splitter = splitter
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
+        self.min_fraction_leaf = min_fraction_leaf
         self.max_depth = max_depth
         self.max_leaf_nodes = max_leaf_nodes
 
@@ -2029,6 +2068,7 @@ cdef class BestFirstTreeBuilder(TreeBuilder):
         cdef Splitter splitter = self.splitter
         cdef SIZE_t max_leaf_nodes = self.max_leaf_nodes
         cdef SIZE_t min_samples_leaf = self.min_samples_leaf
+        cdef float min_fraction_leaf = self.min_fraction_leaf
         cdef SIZE_t min_samples_split = self.min_samples_split
 
         # Recursive partition (without actual recursion)
